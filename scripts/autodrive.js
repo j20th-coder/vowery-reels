@@ -104,6 +104,7 @@
      (the recorder creates it once the video capture is running) */
   function armed() {
     if (!q.get('sync')) return Promise.resolve();
+    fetch('ready?' + Date.now(), { cache: 'no-store' }).catch(function () {}); // tells the recorder the page is up
     return new Promise(function (ok) {
       (function poll() {
         fetch('go.json?' + Date.now(), { cache: 'no-store' })
