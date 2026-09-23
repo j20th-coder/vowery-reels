@@ -33,19 +33,20 @@ xcrun simctl ui "$UDID" appearance light || true
 SRV=$!
 sleep 2
 
-# --- warm-up: first Safari launch + first page load are slow, do them before recording
-xcrun simctl openurl "$UDID" "http://localhost:$PORT/keepsake.html"
-sleep 10
+# --- open the scene page; it loads fully, then waits for go.json before moving
+rm -f site/go.json
+ENC_HOOK=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$HOOK")
+URL="http://localhost:$PORT/keepsake.html?scene=$SCENE&sync=1&hook=$ENC_HOOK"
+echo "URL=$URL"
+xcrun simctl openurl "$UDID" "$URL"
+sleep 45
 xcrun simctl io "$UDID" screenshot out/warmup.png
 
-# --- record
-ENC_HOOK=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$HOOK")
-URL="http://localhost:$PORT/keepsake.html?scene=$SCENE&hook=$ENC_HOOK"
-echo "URL=$URL"
+# --- record: start the capture, then release the page
 xcrun simctl io "$UDID" recordVideo --codec h264 --force "out/$SCENE.mp4" &
 REC=$!
-sleep 2
-xcrun simctl openurl "$UDID" "$URL"
+sleep 3
+echo '{"go":true}' > site/go.json
 sleep "$DUR"
 kill -INT "$REC"
 wait "$REC" || true
