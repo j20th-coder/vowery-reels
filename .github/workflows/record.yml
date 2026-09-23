@@ -19,6 +19,10 @@ on:
         description: "Simulator device name"
         default: "iPhone 16 Pro"
         required: false
+      url:
+        description: "Live demo page to record (self-contained HTML)"
+        default: "https://vowery.my.canva.site/keepsake-box/_assets/remote/embed/codelet/cj9bhyz0yc13mccf/index.html"
+        required: true
 
 jobs:
   record:
@@ -29,6 +33,13 @@ jobs:
 
       - name: Show available simulators
         run: xcrun simctl list devices available | grep -i iphone || true
+
+      - name: Fetch the demo page
+        run: |
+          mkdir -p site
+          curl -sSL --retry 3 -A "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1" "${{ inputs.url }}" -o site/raw.html
+          ls -la site
+          python3 scripts/prepare.py site/raw.html site/keepsake.html
 
       - name: Record
         run: |
