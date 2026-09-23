@@ -91,9 +91,7 @@
       await type('#f-count', '2', 8);
       await wait(400);
       tap('#rsvp-send');
-      await wait(1900);
-      try { localStorage.clear(); } catch (e) {}
-      location.replace(location.pathname + location.search + '&loop=1'); // back to frame 1
+      await wait(2600);                      // "received — thank you" ; the edit cuts back to frame 1 for the loop
     },
 
     /* Just the landing + untie, for calibration */
@@ -102,11 +100,22 @@
     }
   };
 
+  /* with ?sync=1 the page is fully loaded first, then waits for go.json to appear
+     (the recorder creates it once the video capture is running) */
+  function armed() {
+    if (!q.get('sync')) return Promise.resolve();
+    return new Promise(function (ok) {
+      (function poll() {
+        fetch('go.json?' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { if (r.ok) ok(); else setTimeout(poll, 150); })
+          .catch(function () { setTimeout(poll, 150); });
+      })();
+    });
+  }
   function start() {
     hook();
-    if (q.get('loop')) return;               // second load: hold on the landing
     var fn = scenes[scene];
-    if (fn) fn().catch(function (e) { console.error(e); });
+    if (fn) armed().then(fn).catch(function (e) { console.error(e); });
   }
   if (document.readyState === 'complete') setTimeout(start, 300);
   else window.addEventListener('load', function () { setTimeout(start, 300); });
