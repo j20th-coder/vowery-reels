@@ -1,0 +1,29 @@
+name: Fetch live pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "Space-separated URLs to download"
+        default: "https://vowery.my.canva.site/keepsake-box/_assets/remote/embed/codelet/cj9bhyz0yc13mccf/index.html"
+        required: true
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download
+        run: |
+          mkdir -p out
+          i=0
+          for u in ${{ inputs.urls }}; do
+            i=$((i+1))
+            curl -sSL --retry 3 -A "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1" "$u" -o "out/page$i.html"
+            echo "$u" >> out/urls.txt
+          done
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-pages
+          path: out/
+          retention-days: 7
