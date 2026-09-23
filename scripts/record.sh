@@ -29,17 +29,22 @@ xcrun simctl status_bar "$UDID" override --time 9:41 --dataNetwork wifi --wifiMo
 xcrun simctl ui "$UDID" appearance light || true
 
 # --- serve the site locally (the simulator shares the host network)
-( cd site && python3 -m http.server $PORT >/dev/null 2>&1 ) &
+( cd site && exec python3 -m http.server $PORT --bind 127.0.0.1 >../out/server.log 2>&1 ) &
 SRV=$!
 sleep 2
 
 # --- open the scene page; it loads fully, then waits for go.json before moving
 rm -f site/go.json
 ENC_HOOK=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$HOOK")
-URL="http://localhost:$PORT/keepsake.html?scene=$SCENE&sync=1&hook=$ENC_HOOK"
+URL="http://127.0.0.1:$PORT/keepsake.html?scene=$SCENE&sync=1&hook=$ENC_HOOK"
 echo "URL=$URL"
 xcrun simctl openurl "$UDID" "$URL"
-sleep 45
+# wait until the page itself says it is loaded (it pings /ready), up to 3 minutes
+for i in $(seq 1 180); do
+  if grep -q "GET /ready" out/server.log 2>/dev/null; then echo "page ready after ${i}s"; break; fi
+  sleep 1
+done
+sleep 2
 xcrun simctl io "$UDID" screenshot out/warmup.png
 
 # --- record: start the capture, then release the page
