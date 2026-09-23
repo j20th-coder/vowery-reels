@@ -1,0 +1,46 @@
+name: Record reel (iOS Simulator)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scene:
+        description: "Scene name (see scripts/autodrive.js)"
+        default: "keepsake1"
+        required: true
+      hook:
+        description: "Hook text shown from frame 1 (leave empty for none)"
+        default: "the invitation your guests can't throw away"
+        required: false
+      seconds:
+        description: "Recording length in seconds"
+        default: "16"
+        required: true
+      device:
+        description: "Simulator device name"
+        default: "iPhone 16 Pro"
+        required: false
+
+jobs:
+  record:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show available simulators
+        run: xcrun simctl list devices available | grep -i iphone || true
+
+      - name: Record
+        run: |
+          chmod +x scripts/record.sh
+          scripts/record.sh "${{ inputs.scene }}" "${{ inputs.hook }}" "${{ inputs.seconds }}" "${{ inputs.device }}"
+
+      - name: Probe the video
+        run: |
+          ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate,duration -of default=nw=1 out/*.mp4 || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reel-${{ inputs.scene }}
+          path: out/
+          retention-days: 14
